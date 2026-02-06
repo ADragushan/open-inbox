@@ -140,3 +140,63 @@ This project evolves from the current `tmp/` inbox pipeline:
 | Storage | `ref/` markdown files | Same |
 
 The decision logging format and learning loop carry forward. Past decisions inform future routing confidence.
+
+## Output Destinations
+
+### 1. Reference (`ref/`)
+Markdown knowledge base in the personal repo. Context, explanations, how-tos.
+
+### 2. TODO (GitHub Issues)
+Actionable items tracked as issues in the appropriate repo.
+
+### 3. Calendar (Google Calendar)
+Time-based events created via `aarond@wondermill.com` account.
+
+### 4. NAS (`/Dropbox/nas/`)
+Physical files: PDFs, images, documents, tax filings, attachments.
+
+**NAS mirrors the ref/ structure exactly:**
+```
+ref/                          /Dropbox/nas/
+├── business/                 ├── business/
+│   └── taxes.md             │   └── taxes/2024/return.pdf
+├── family/                   ├── family/
+│   └── reuben/              │   └── reuben/
+├── houses/                   ├── houses/
+│   └── pei/                 │   └── pei/
+└── ...                       └── ...
+```
+
+**Linking convention:**
+```markdown
+See: nas://business/taxes/2024/return.pdf
+```
+
+The path after `nas://` mirrors the ref structure. Reference explains context; NAS stores the actual files.
+
+### 5. Discard
+Not worth keeping. Logged but not stored.
+
+## Development Principles
+
+### Everything Logs Its Actions
+All skills and scripts must log what they do. No silent operations.
+
+- **Routing decisions** → `logs/routing.jsonl`
+- **Calendar events created** → `logs/calendar.jsonl`
+- **Files written to NAS** → `logs/nas.jsonl`
+- **Errors and failures** → `logs/errors.jsonl`
+
+Logs are append-only JSONL files with timestamps. This enables:
+- Debugging when things go wrong
+- Learning from patterns over time
+- Auditing what the system did
+
+### Daily Setup Skill
+A `/daily-setup` skill runs each morning to:
+- Sync ref/ and NAS folder structures (create missing folders in either)
+- Report any orphaned files (NAS files with no corresponding ref/ area)
+- Surface any stuck or failed items from previous day
+- Summarize what's pending
+
+This keeps the system healthy and prevents drift.
