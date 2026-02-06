@@ -266,10 +266,32 @@ The system runs through a daily pipeline of skills:
 
 This threshold applies in **live mode**. In **backfill mode**, the threshold is effectively 100% (always surface to user) unless the item is clearly evergreen reference material.
 
+### Review Queue
+
+Items below the confidence threshold are stored in Memos with the `#review` tag. This provides:
+- Visual UI to see pending items
+- Accessible from phone (Memos PWA)
+- Same place items are captured
+- Easy filtering by tag
+
 ### Orchestration: `/daily-process`
 
-A single skill that runs the full pipeline:
-1. Runs `/open-inbox` to collect from all sources
-2. Runs `/auto-route` to triage and auto-execute high-confidence items
-3. Reports summary: "Auto-routed 8 items. 4 need your review."
-4. Asks if you want to launch `/processing-inbox-one-by-one` for the review queue
+An **interactive** skill that runs the full pipeline with human checkpoints:
+
+1. **Intake**: Runs `/open-inbox` to collect from all sources
+   - Pauses to show what was collected
+   - "Found 15 items (8 memos, 5 emails, 2 tmp files). Continue?"
+
+2. **Triage**: Runs `/auto-route` to evaluate each item
+   - Shows proposed auto-routes before executing
+   - "Will auto-route 11 items. 4 queued for review. Proceed?"
+
+3. **Execute**: Auto-routes high-confidence items
+   - Shows results as they happen
+   - Logs all actions
+
+4. **Review**: Offers to launch `/processing-inbox-one-by-one`
+   - "4 items need your review. Process now?"
+   - If yes, opens browser preview and steps through each
+
+The interactive checkpoints ensure you stay in control while still benefiting from automation.
