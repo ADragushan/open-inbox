@@ -200,3 +200,76 @@ A `/daily-setup` skill runs each morning to:
 - Summarize what's pending
 
 This keeps the system healthy and prevents drift.
+
+## Daily Workflow
+
+The system runs through a daily pipeline of skills:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         /daily-setup                                 │
+│  • Sync ref/ ↔ NAS folders                                          │
+│  • Health check                                                      │
+│  • Report pending items                                              │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         /open-inbox (INTAKE)                         │
+│  Collects from all sources into unified queue:                       │
+│  • Memos (#inbox tag)                                                │
+│  • Email (aarond@wondermill.com)                                     │
+│  • tmp/ files                                                        │
+│  • Voice memos (future)                                              │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         /auto-route (TRIAGE)                         │
+│  For each item:                                                      │
+│  • Extract structure (type, entities, dates)                         │
+│  • Check routing rules + decisions.jsonl patterns                    │
+│  • Assign confidence score                                           │
+│                                                                      │
+│  85%+ confidence → Auto-execute                                      │
+│  <85% confidence → Queue for review                                  │
+└─────────────────────────────────────────────────────────────────────┘
+                          │                    │
+            ┌─────────────┘                    └─────────────┐
+            ▼                                                ▼
+┌───────────────────────┐                    ┌───────────────────────┐
+│   AUTO-EXECUTED        │                    │   REVIEW QUEUE         │
+│                        │                    │   Memos #review tag    │
+│   • Reference → ref/   │                    │                        │
+│   • Issue → GitHub     │                    │   Items needing human  │
+│   • Calendar → Google  │                    │   decision             │
+│   • File → NAS         │                    │                        │
+│   • Discard → logged   │                    │                        │
+└───────────────────────┘                    └───────────────────────┘
+                                                         │
+                                                         ▼
+                                    ┌───────────────────────────────────┐
+                                    │  /processing-inbox-one-by-one     │
+                                    │                                   │
+                                    │  • Visual browser preview         │
+                                    │  • Step through each item         │
+                                    │  • Human picks routing            │
+                                    │  • Log decision for learning      │
+                                    └───────────────────────────────────┘
+```
+
+### Confidence Threshold
+
+**85%** is the threshold for auto-execution:
+- **85%+**: Route automatically, log the action
+- **<85%**: Queue for human review in Memos with `#review` tag
+
+This threshold applies in **live mode**. In **backfill mode**, the threshold is effectively 100% (always surface to user) unless the item is clearly evergreen reference material.
+
+### Orchestration: `/daily-process`
+
+A single skill that runs the full pipeline:
+1. Runs `/open-inbox` to collect from all sources
+2. Runs `/auto-route` to triage and auto-execute high-confidence items
+3. Reports summary: "Auto-routed 8 items. 4 need your review."
+4. Asks if you want to launch `/processing-inbox-one-by-one` for the review queue
